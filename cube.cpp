@@ -7,6 +7,7 @@
 
 constexpr size_t NUM_TRIS = 12;
 constexpr size_t NUM_VERTS = 8;
+constexpr bool CULLING = true;
 
 using Tri = std::array<int, 3>;
 
@@ -108,18 +109,36 @@ int main() {
         }
     }
 
+    std::array<size_t, 6> face_order = {0, 1, 2, 3, 4, 5};
+//    std::array<size_t, 6> face_order = {5, 2, 3, 0, 4, 1};
+
+    for(size_t f : face_order) {
+        for(size_t k = 0; k < 2; k++) {
+            size_t t = 2 * f + k;
+            const Vec3& a = screen[tris[t][0]];
+            const Vec3& b = screen[tris[t][1]];
+            const Vec3& c = screen[tris[t][2]];
+
+            if(CULLING && back_facing[t]) {
+                continue;
+            }
+
+            draw_triangle(fb, a, b, c, face_colors[f]);
+        }
+    }
+/*
     for(size_t i = 0; i < tris.size(); i++) {
         const Vec3& a = screen[tris[i][0]];
         const Vec3& b = screen[tris[i][1]];
         const Vec3& c = screen[tris[i][2]];
 
-        if(back_facing[i]) {
+        if(CULLING && back_facing[i]) {
             continue;
         }
 
         draw_triangle(fb, a, b, c, face_colors[i / 2]);
     }
-
+*/
     for(size_t i = 0; i < tris.size(); i++) {
         const Vec3& a = screen[tris[i][0]];
         const Vec3& b = screen[tris[i][1]];
