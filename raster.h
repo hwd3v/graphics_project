@@ -50,7 +50,7 @@ inline float edge_function(const Vec3& a, const Vec3& b, const Vec3& p) {
 }
 
 inline bool is_back_facing(const Vec3& a, const Vec3& b, const Vec3& c) {
-    return (edge_function(a, b, c) >= 0);    // 結果等於零時三角形面積為零，當作背面三角形計算
+    return (edge_function(a, b, c) >= 0);    // 螢幕座標 y 朝下，從外面看 CCW 的正面在這裡會是負值，所以 >= 0 是背面
 }
 
 inline void draw_triangle(Framebuffer& fb, const Vec3& v0, const Vec3& v1, const Vec3& v2, Color c) {

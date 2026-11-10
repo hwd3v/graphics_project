@@ -8,10 +8,14 @@ struct Color {
 };
 
 struct Framebuffer {
-    int width, height;
-    std::vector<uint8_t> pixels;
+    static constexpr float DEPTH_CLEAR = 1.0f;    // 搭配深度測試 z < depth：far plane（z = 1）以外的東西都不畫
 
-    Framebuffer(int w, int h) : width(w), height(h), pixels(w * h * 3, 0) {}
+    int width, height;
+
+    std::vector<uint8_t> pixels;
+    std::vector<float> depth;
+
+    Framebuffer(int w, int h) : width(w), height(h), pixels(w * h * 3, 0), depth(w * h, DEPTH_CLEAR) {}
 
     void set_pixel(int x, int y, Color c) {
         if(x < 0 || y < 0 || x >= width || y >= height) {
@@ -29,6 +33,12 @@ struct Framebuffer {
             for(int x = 0; x < width; x++) {
                 set_pixel(x, y, c);
             }
+        }
+    }
+
+    void clear_depth() {
+        for(size_t i = 0; i < depth.size(); i++) {
+            depth[i] = DEPTH_CLEAR;
         }
     }
 
