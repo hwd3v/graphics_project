@@ -42,6 +42,19 @@ struct Framebuffer {
         }
     }
 
+    bool depth_test(int x, int y, float z) {
+        if(x < 0 || y < 0 || x >= width || y >= height) {
+            return false;
+        }
+
+        int index = y * width + x;
+        if(z < depth[index]) {
+            depth[index] = z;
+            return true;
+        }
+        return false;
+    }
+
     void write_ppm(const char* filename) const {
         FILE* fp = fopen(filename, "wb");
         if(fp == nullptr) {

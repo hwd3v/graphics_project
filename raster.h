@@ -72,6 +72,10 @@ inline void draw_triangle(Framebuffer& fb, const Vec3& v0, const Vec3& v1, const
         max_y = fb.height - 1;
     }
 
+    float area = edge_function(v0, v1, v2);
+    if(area == 0) {
+        return;
+    }
     for(int y = min_y; y <= max_y; y++) {
         for(int x = min_x; x <= max_x; x++) {
             Vec3 p = Vec3{static_cast<float> (x) + 0.5f, static_cast<float> (y) + 0.5f, 0.0f};
@@ -81,7 +85,14 @@ inline void draw_triangle(Framebuffer& fb, const Vec3& v0, const Vec3& v1, const
             float e2 = edge_function(v0, v1, p);
 
             if((e0 >= 0 && e1 >= 0 && e2 >= 0) || (e0 <= 0 && e1 <= 0&& e2 <= 0)) {
-                fb.set_pixel(x, y, c);
+                float w0 = e0 / area;
+                float w1 = e1 / area;
+                float w2 = e2 / area;    // (w0 + w1 + w2) = 1
+                float z = w0 * v0.z + w1 * v1.z + w2 * v2.z;
+
+                if(fb.depth_test(x, y, z)) {
+                    fb.set_pixel(x, y, c);
+                }
             }
         }
     }
