@@ -16,12 +16,13 @@ int main() {
 
     draw_triangle(fb, a0, a1, a2, {255, 0, 0});
 
-    fb.clear_depth();
+//    fb.clear_depth();
 
     draw_triangle(fb, b0, b1, b2, {0, 255, 0});
 //    draw_triangle(fb, a0, a1, a2, {255, 0, 0});
 
-    fb.write_ppm("zbuffer_test_painter.ppm");
+//    fb.write_ppm("zbuffer_test_painter.ppm");
+    fb.write_depth_pgm("zbuffer_test_depth.pgm");
 
     return 0;
 }

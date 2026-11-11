@@ -154,6 +154,7 @@ int main() {
     }
 
     fb.write_ppm("cube.ppm");
+    fb.write_depth_pgm("cube.pgm");
 
     return 0;
 }
