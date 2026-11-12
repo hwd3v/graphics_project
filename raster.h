@@ -6,7 +6,7 @@
 #include "framebuffer.h"
 #include "math3d.h"
 
-inline void draw_line(Framebuffer& fb, int x0, int y0, int x1, int y1, Color c) {
+inline void draw_line(Framebuffer& fb, int x0, int y0, int x1, int y1, float z0, float z1, Color c) {
     bool steep = false;
     if(std::abs(y1 - y0) > std::abs(x1 - x0)) {
         steep = true;
@@ -18,6 +18,7 @@ inline void draw_line(Framebuffer& fb, int x0, int y0, int x1, int y1, Color c) 
     if(x0 > x1) {
         std::swap(x0, x1);
         std::swap(y0, y1);
+        std::swap(z0, z1);
     }
 
     int dx = x1 - x0;
@@ -29,12 +30,21 @@ inline void draw_line(Framebuffer& fb, int x0, int y0, int x1, int y1, Color c) 
     int error = 0;
     int y = y0;
 
+    if(dx == 0) {
+        dx = 1;
+    }
     for(int x = x0; x <= x1; x++) {
+        float t = static_cast<float> (x - x0) / static_cast<float> (dx);
+        float z = z0 + t * (z1 - z0);
+
+        int px = x;
+        int py = y;
         if(steep) {
-            fb.set_pixel(y, x, c);
+            px = y;
+            py = x;
         }
-        else {
-            fb.set_pixel(x, y, c);
+        if(fb.depth_test(px, py, z)) {
+            fb.set_pixel(px, py, c);
         }
 
         error += 2 * dy;

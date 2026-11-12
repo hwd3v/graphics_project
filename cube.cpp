@@ -8,6 +8,7 @@
 constexpr size_t NUM_TRIS = 12;
 constexpr size_t NUM_VERTS = 8;
 constexpr bool CULLING = true;
+constexpr float LINE_DEPTH_BIAS = 0.01f;    // 太小會 z-fighting，太大背面的線會從角落透出來
 
 using Tri = std::array<int, 3>;
 
@@ -35,7 +36,7 @@ void draw_edge(Framebuffer& fb, const Vec3& p, const Vec3& q, Color c) {
     int x1 = static_cast<int> (std::floor(q.x));
     int y1 = static_cast<int> (std::floor(q.y));
 
-    draw_line(fb, x0, y0, x1, y1, c);
+    draw_line(fb, x0, y0, x1, y1, p.z - LINE_DEPTH_BIAS, q.z - LINE_DEPTH_BIAS, c);
 }
 
 int main() {
@@ -144,7 +145,7 @@ int main() {
         const Vec3& b = screen[tris[i][1]];
         const Vec3& c = screen[tris[i][2]];
 
-        if(back_facing[i]) {
+        if(CULLING && back_facing[i]) {
             continue;
         }
 
