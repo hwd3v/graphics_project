@@ -7,7 +7,7 @@
 
 constexpr size_t NUM_TRIS = 12;
 constexpr size_t NUM_VERTS = 8;
-constexpr bool CULLING = true;
+constexpr bool CULLING = false;
 constexpr float LINE_DEPTH_BIAS = 0.01f;    // 太小會 z-fighting，太大背面的線會從角落透出來
 
 using Tri = std::array<int, 3>;
@@ -39,13 +39,25 @@ void draw_edge(Framebuffer& fb, const Vec3& p, const Vec3& q, Color c) {
     draw_line(fb, x0, y0, x1, y1, p.z - LINE_DEPTH_BIAS, q.z - LINE_DEPTH_BIAS, c);
 }
 
+Vec3 to_screen(const Vec4& clip, const Framebuffer& fb) {
+    float x_ndc = clip.x / clip.w;
+    float y_ndc = clip.y / clip.w;
+    float z_ndc = clip.z / clip.w;
+
+    float x_screen = (x_ndc + 1) * (static_cast<float> (fb.width) * 0.5f);
+    float y_screen = (1 - y_ndc) * (static_cast<float> (fb.height) * 0.5f);
+    float z_screen = z_ndc;
+
+    return Vec3(x_screen, y_screen, z_screen);
+}
+
 int main() {
     Framebuffer fb(800, 600);
 
     fb.clear(Color{40, 40, 40});
 
     Mat4 M = Mat4::identity();
-    Mat4 V = Mat4::lookAt(Vec3(3, 2, 4), Vec3(0, 0, 0), Vec3(0, 1, 0));
+    Mat4 V = Mat4::lookAt(Vec3(0.9f, 0.6f, 1.2f), Vec3(0, 0, 0), Vec3(0, 1, 0));
     Mat4 P = Mat4::perspective(Mat4::radians(60.0f), static_cast<float> (fb.width) / static_cast<float> (fb.height), 1.0f, 10.0f);
 
     Mat4 mvp = P * V * M;
@@ -71,19 +83,16 @@ int main() {
     }
 
     std::array<Vec3, NUM_VERTS> screen;
+    std::array<Vec4, NUM_VERTS> clip_coords;
+    std::array<bool, NUM_VERTS> near_clipped;
 
     for(size_t i = 0; i < verts.size(); i++) {
         Vec4 clip = mvp * Vec4::point(verts[i]);
 
-        float x_ndc = clip.x / clip.w;
-        float y_ndc = clip.y / clip.w;
-        float z_ndc = clip.z / clip.w;
+        clip_coords[i] = clip;
+        near_clipped[i] = (clip.z < -clip.w);
 
-        float x_screen = (x_ndc + 1) * (static_cast<float> (fb.width) * 0.5f);
-        float y_screen = (1 - y_ndc) * (static_cast<float> (fb.height) * 0.5f);
-        float z_screen = z_ndc;
-
-        screen[i] = {x_screen, y_screen, z_screen};
+        screen[i] = to_screen(clip, fb);
 
         std::cout << "clip.w = " << clip.w << ", screen " << i << " = ";
         screen[i].print();
@@ -123,6 +132,9 @@ int main() {
             if(CULLING && back_facing[t]) {
                 continue;
             }
+            if(near_clipped[tris[t][0]] || near_clipped[tris[t][1]] || near_clipped[tris[t][2]]) {
+                continue;
+            }
 
             draw_triangle(fb, a, b, c, face_colors[f]);
         }
@@ -148,6 +160,9 @@ int main() {
         if(CULLING && back_facing[i]) {
             continue;
         }
+        if(near_clipped[tris[i][0]] || near_clipped[tris[i][1]] || near_clipped[tris[i][2]]) {
+            continue;
+        }
 
         draw_edge(fb, a, b, Color{0, 0, 0});
         draw_edge(fb, b, c, Color{0, 0, 0});
@@ -155,7 +170,7 @@ int main() {
     }
 
     fb.write_ppm("cube.ppm");
-    fb.write_depth_pgm("cube.pgm");
+//    fb.write_depth_pgm("cube.pgm");
 
     return 0;
 }
