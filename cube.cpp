@@ -1,6 +1,7 @@
 #include <iostream>
 #include <array>
 #include <cmath>
+#include <vector>
 #include "framebuffer.h"
 #include "raster.h"
 #include "math3d.h"
@@ -49,6 +50,48 @@ Vec3 to_screen(const Vec4& clip, const Framebuffer& fb) {
     float z_screen = z_ndc;
 
     return Vec3(x_screen, y_screen, z_screen);
+}
+
+Vec4 intersect_near(const Vec4& a, const Vec4& b) {
+    float d_a = a.z + a.w;
+    float d_b = b.z + b.w;
+
+    float t = d_a / (d_a - d_b);    // 一個在外一個在內 (d_a - d_b) 就不會為0
+
+    float x = a.x + (b.x - a.x) * t;
+    float y = a.y + (b.y - a.y) * t;
+    float z = a.z + (b.z - a.z) * t;
+    float w = a.w + (b.w - a.w) * t;
+
+    return Vec4(x, y, z, w);
+}
+
+bool inside(const Vec4& a) {
+    return a.z + a.w >= 0;
+}
+
+std::vector<Vec4> clip_near(const Vec4& a, const Vec4& b, const Vec4& c) {
+    std::vector<Vec4> result;
+    Vec4 v[3] = {a, b, c};
+
+    for(int i = 0; i < 3; i++) {
+        bool in_cur = inside(v[i]);
+        bool in_next = inside(v[(i + 1) % 3]);
+
+        if(in_cur) {
+            result.push_back(v[i]);
+        }
+        if(in_cur != in_next) {
+            const Vec4& in_pt = in_cur ? v[i] : v[(i + 1) % 3];    // 同一條邊會被兩個三角形共用，兩邊算出來焦點需完全一樣，永遠從裡面的點出發
+            const Vec4& out_pt = in_cur ? v[(i + 1) % 3] : v[i];
+            Vec4 intersect_point = intersect_near(in_pt, out_pt);
+            result.push_back(intersect_point);
+            std::cout << "intersect point: z + w = " << intersect_point.z + intersect_point.w << "\n";
+        }
+    }
+    std::cout << result.size() << "\n";
+
+    return result;
 }
 
 int main() {
@@ -122,6 +165,11 @@ int main() {
     std::array<size_t, 6> face_order = {0, 1, 2, 3, 4, 5};
 //    std::array<size_t, 6> face_order = {5, 2, 3, 0, 4, 1};
 
+    intersect_near(clip_coords[4], clip_coords[5]);
+    clip_near(clip_coords[tris[2][0]], clip_coords[tris[2][1]], clip_coords[tris[2][2]]);
+    clip_near(clip_coords[tris[10][0]], clip_coords[tris[10][1]], clip_coords[tris[10][2]]);
+    clip_near(clip_coords[tris[0][0]], clip_coords[tris[0][1]], clip_coords[tris[0][2]]);
+
     for(size_t f : face_order) {
         for(size_t k = 0; k < 2; k++) {
             size_t t = 2 * f + k;
@@ -139,19 +187,7 @@ int main() {
             draw_triangle(fb, a, b, c, face_colors[f]);
         }
     }
-/*
-    for(size_t i = 0; i < tris.size(); i++) {
-        const Vec3& a = screen[tris[i][0]];
-        const Vec3& b = screen[tris[i][1]];
-        const Vec3& c = screen[tris[i][2]];
 
-        if(CULLING && back_facing[i]) {
-            continue;
-        }
-
-        draw_triangle(fb, a, b, c, face_colors[i / 2]);
-    }
-*/
     for(size_t i = 0; i < tris.size(); i++) {
         const Vec3& a = screen[tris[i][0]];
         const Vec3& b = screen[tris[i][1]];
