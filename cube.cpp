@@ -8,7 +8,7 @@
 
 constexpr size_t NUM_TRIS = 12;
 constexpr size_t NUM_VERTS = 8;
-constexpr bool CULLING = false;
+constexpr bool CULLING = true;
 constexpr float LINE_DEPTH_BIAS = 0.01f;    // 太小會 z-fighting，太大背面的線會從角落透出來
 
 using Tri = std::array<int, 3>;
@@ -86,10 +86,8 @@ std::vector<Vec4> clip_near(const Vec4& a, const Vec4& b, const Vec4& c) {
             const Vec4& out_pt = in_cur ? v[(i + 1) % 3] : v[i];
             Vec4 intersect_point = intersect_near(in_pt, out_pt);
             result.push_back(intersect_point);
-            std::cout << "intersect point: z + w = " << intersect_point.z + intersect_point.w << "\n";
         }
     }
-    std::cout << result.size() << "\n";
 
     return result;
 }
@@ -100,7 +98,7 @@ int main() {
     fb.clear(Color{40, 40, 40});
 
     Mat4 M = Mat4::identity();
-    Mat4 V = Mat4::lookAt(Vec3(0.9f, 0.6f, 1.2f), Vec3(0, 0, 0), Vec3(0, 1, 0));
+    Mat4 V = Mat4::lookAt(Vec3(3, 2, 4), Vec3(0, 0, 0), Vec3(0, 1, 0));
     Mat4 P = Mat4::perspective(Mat4::radians(60.0f), static_cast<float> (fb.width) / static_cast<float> (fb.height), 1.0f, 10.0f);
 
     Mat4 mvp = P * V * M;
@@ -127,13 +125,11 @@ int main() {
 
     std::array<Vec3, NUM_VERTS> screen;
     std::array<Vec4, NUM_VERTS> clip_coords;
-    std::array<bool, NUM_VERTS> near_clipped;
 
     for(size_t i = 0; i < verts.size(); i++) {
         Vec4 clip = mvp * Vec4::point(verts[i]);
 
         clip_coords[i] = clip;
-        near_clipped[i] = (clip.z < -clip.w);
 
         screen[i] = to_screen(clip, fb);
 
@@ -146,63 +142,60 @@ int main() {
         {0, 0, 255}, {0, 255, 255}, {255, 0, 0}    // x, y, z
     }};
 
-    std::array<bool, NUM_TRIS> back_facing;
-    for(size_t i = 0; i < tris.size(); i++) {
-        const Vec3& a = screen[tris[i][0]];
-        const Vec3& b = screen[tris[i][1]];
-        const Vec3& c = screen[tris[i][2]];
-
-        back_facing[i] = is_back_facing(a, b, c);
-
-        if(back_facing[i]) {
-            std::cout << "tri" << i << " is back facing: " << edge_function(a, b, c) << "\n";
-        }
-        else{
-            std::cout << "tri" << i << " is not back facing: " << edge_function(a, b, c) << "\n";
-        }
-    }
-
     std::array<size_t, 6> face_order = {0, 1, 2, 3, 4, 5};
 //    std::array<size_t, 6> face_order = {5, 2, 3, 0, 4, 1};
-
-    intersect_near(clip_coords[4], clip_coords[5]);
-    clip_near(clip_coords[tris[2][0]], clip_coords[tris[2][1]], clip_coords[tris[2][2]]);
-    clip_near(clip_coords[tris[10][0]], clip_coords[tris[10][1]], clip_coords[tris[10][2]]);
-    clip_near(clip_coords[tris[0][0]], clip_coords[tris[0][1]], clip_coords[tris[0][2]]);
 
     for(size_t f : face_order) {
         for(size_t k = 0; k < 2; k++) {
             size_t t = 2 * f + k;
-            const Vec3& a = screen[tris[t][0]];
-            const Vec3& b = screen[tris[t][1]];
-            const Vec3& c = screen[tris[t][2]];
+            const Vec4& ca = clip_coords[tris[t][0]];
+            const Vec4& cb = clip_coords[tris[t][1]];
+            const Vec4& cc = clip_coords[tris[t][2]];
 
-            if(CULLING && back_facing[t]) {
-                continue;
-            }
-            if(near_clipped[tris[t][0]] || near_clipped[tris[t][1]] || near_clipped[tris[t][2]]) {
+            std::vector<Vec4> poly = clip_near(ca, cb, cc);
+            if(poly.size() < 3) {
                 continue;
             }
 
-            draw_triangle(fb, a, b, c, face_colors[f]);
+            std::vector<Vec3> s;
+            for(const Vec4& p : poly) {
+                s.push_back(to_screen(p, fb));
+            }
+
+            for(size_t j = 1; j + 1 < s.size(); j++) {
+                if(CULLING && is_back_facing(s[0], s[j], s[j + 1])) {
+                    continue;
+                }
+
+                draw_triangle(fb, s[0], s[j], s[j + 1], face_colors[f]);
+            }
         }
     }
 
     for(size_t i = 0; i < tris.size(); i++) {
-        const Vec3& a = screen[tris[i][0]];
-        const Vec3& b = screen[tris[i][1]];
-        const Vec3& c = screen[tris[i][2]];
+        const Vec4& ca = clip_coords[tris[i][0]];
+        const Vec4& cb = clip_coords[tris[i][1]];
+        const Vec4& cc = clip_coords[tris[i][2]];
 
-        if(CULLING && back_facing[i]) {
-            continue;
-        }
-        if(near_clipped[tris[i][0]] || near_clipped[tris[i][1]] || near_clipped[tris[i][2]]) {
+        std::vector<Vec4> poly = clip_near(ca, cb, cc);
+        if(poly.size() < 3) {
             continue;
         }
 
-        draw_edge(fb, a, b, Color{0, 0, 0});
-        draw_edge(fb, b, c, Color{0, 0, 0});
-        draw_edge(fb, c, a, Color{0, 0, 0});
+        std::vector<Vec3> s;
+        for(const Vec4& p : poly) {
+            s.push_back(to_screen(p, fb));
+        }
+
+        for(size_t j = 1; j + 1 < s.size(); j++) {
+            if(CULLING && is_back_facing(s[0], s[j], s[j + 1])) {
+                continue;
+            }
+
+            draw_edge(fb, s[0], s[j], Color{0, 0, 0});
+            draw_edge(fb, s[j], s[j + 1], Color{0, 0, 0});
+            draw_edge(fb, s[j + 1], s[0], Color{0, 0, 0});
+        }
     }
 
     fb.write_ppm("cube.ppm");
