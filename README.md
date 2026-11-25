@@ -40,7 +40,8 @@ graphics_project/
 ├── tests/     Test programs
 ├── stages/    Stage 1–3 C code, kept as a learning record
 ├── images/    Images used in this README
-└── build/     Compiled programs (not in git)
+├── build/     Compiled programs (not in git)
+└── Makefile
 ```
 
 ### `include/`
@@ -76,24 +77,24 @@ graphics_project/
 
 ## Build and Run
 
-Requires `gcc` / `g++` on Linux. No external libraries.
+Requires `gcc` / `g++` and `make` on Linux. No external libraries.
 
-Each `.c` / `.cpp` file with a `main` compiles on its own. The C++ headers are in `include/`, so C++ files are compiled with `-I include`.
+The C++ demo and tests are built with `make`:
+
+```bash
+make            # build the demo and all tests into build/
+make clean      # remove build/
+
+./build/cube
+./build/zbuffer_test
+```
+
+The C stages are not in the Makefile. Each one compiles on its own:
 
 ```bash
 mkdir -p build
-
-# C stages (example)
 gcc -g -Wall -Wextra stages/edgefunction.c -o build/edgefunction
 ./build/edgefunction
-
-# C++ demo
-g++ -std=c++17 -g -Wall -Wextra -Wpedantic -Wconversion -I include apps/cube.cpp -o build/cube
-./build/cube
-
-# C++ tests (example)
-g++ -std=c++17 -g -Wall -Wextra -Wpedantic -Wconversion -I include tests/zbuffer_test.cpp -o build/zbuffer_test
-./build/zbuffer_test
 ```
 
 Run from the project root. Output images are written to the current directory.
