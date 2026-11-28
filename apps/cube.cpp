@@ -142,6 +142,10 @@ int main() {
     }};
 
     for(size_t t = 0; t < cube.triangles.size(); t++) {
+        cube.colors.push_back(face_colors[t / 2]);
+    }
+
+    for(size_t t = 0; t < cube.triangles.size(); t++) {
         const Vec4& ca = clip_coords[cube.triangles[t][0]];
         const Vec4& cb = clip_coords[cube.triangles[t][1]];
         const Vec4& cc = clip_coords[cube.triangles[t][2]];
@@ -161,7 +165,7 @@ int main() {
                 continue;
             }
 
-            draw_triangle(fb, s[0], s[j], s[j + 1], face_colors[t / 2]);
+            draw_triangle(fb, s[0], s[j], s[j + 1], cube.colors[t]);
         }
     }
 
