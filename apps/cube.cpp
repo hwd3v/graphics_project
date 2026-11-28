@@ -89,6 +89,66 @@ std::vector<Vec4> clip_near(const Vec4& a, const Vec4& b, const Vec4& c) {
     return result;
 }
 
+void draw_mesh(Framebuffer& fb, const Mesh& mesh, const Mat4& mvp) {
+    std::vector<Vec4> clip_coords (mesh.vertices.size());
+
+    for(size_t i = 0; i < mesh.vertices.size(); i++) {
+        Vec4 clip = mvp * Vec4::point(mesh.vertices[i]);
+
+        clip_coords[i] = clip;
+    }
+
+    for(size_t t = 0; t < mesh.triangles.size(); t++) {
+        const Vec4& ca = clip_coords[mesh.triangles[t][0]];
+        const Vec4& cb = clip_coords[mesh.triangles[t][1]];
+        const Vec4& cc = clip_coords[mesh.triangles[t][2]];
+
+        std::vector<Vec4> poly = clip_near(ca, cb, cc);
+        if(poly.size() < 3) {
+            continue;
+        }
+
+        std::vector<Vec3> s;
+        for(const Vec4& p : poly) {
+            s.push_back(to_screen(p, fb));
+        }
+
+        for(size_t j = 1; j + 1 < s.size(); j++) {
+            if(CULLING && is_back_facing(s[0], s[j], s[j + 1])) {
+                continue;
+            }
+
+            draw_triangle(fb, s[0], s[j], s[j + 1], mesh.colors[t]);
+        }
+    }
+
+    for(size_t i = 0; i < mesh.triangles.size(); i++) {
+        const Vec4& ca = clip_coords[mesh.triangles[i][0]];
+        const Vec4& cb = clip_coords[mesh.triangles[i][1]];
+        const Vec4& cc = clip_coords[mesh.triangles[i][2]];
+
+        std::vector<Vec4> poly = clip_near(ca, cb, cc);
+        if(poly.size() < 3) {
+            continue;
+        }
+
+        std::vector<Vec3> s;
+        for(const Vec4& p : poly) {
+            s.push_back(to_screen(p, fb));
+        }
+
+        for(size_t j = 1; j + 1 < s.size(); j++) {
+            if(CULLING && is_back_facing(s[0], s[j], s[j + 1])) {
+                continue;
+            }
+
+            draw_edge(fb, s[0], s[j], Color{0, 0, 0});
+            draw_edge(fb, s[j], s[j + 1], Color{0, 0, 0});
+            draw_edge(fb, s[j + 1], s[0], Color{0, 0, 0});
+        }
+    }
+}
+
 int main() {
     Framebuffer fb(800, 600);
 
@@ -122,20 +182,6 @@ int main() {
         return 1;
     }
 
-    std::vector<Vec3> screen (cube.vertices.size());
-    std::vector<Vec4> clip_coords (cube.vertices.size());
-
-    for(size_t i = 0; i < cube.vertices.size(); i++) {
-        Vec4 clip = mvp * Vec4::point(cube.vertices[i]);
-
-        clip_coords[i] = clip;
-
-        screen[i] = to_screen(clip, fb);
-
-        std::cout << "clip.w = " << clip.w << ", screen " << i << " = ";
-        screen[i].print();
-    }
-
     std::array<Color, 6> face_colors = {{
         {255, 255, 0}, {255, 255, 255}, {0, 255, 0},    // -x, -y, -z
         {0, 0, 255}, {0, 255, 255}, {255, 0, 0}    // x, y, z
@@ -145,56 +191,7 @@ int main() {
         cube.colors.push_back(face_colors[t / 2]);
     }
 
-    for(size_t t = 0; t < cube.triangles.size(); t++) {
-        const Vec4& ca = clip_coords[cube.triangles[t][0]];
-        const Vec4& cb = clip_coords[cube.triangles[t][1]];
-        const Vec4& cc = clip_coords[cube.triangles[t][2]];
-
-        std::vector<Vec4> poly = clip_near(ca, cb, cc);
-        if(poly.size() < 3) {
-            continue;
-        }
-
-        std::vector<Vec3> s;
-        for(const Vec4& p : poly) {
-            s.push_back(to_screen(p, fb));
-        }
-
-        for(size_t j = 1; j + 1 < s.size(); j++) {
-            if(CULLING && is_back_facing(s[0], s[j], s[j + 1])) {
-                continue;
-            }
-
-            draw_triangle(fb, s[0], s[j], s[j + 1], cube.colors[t]);
-        }
-    }
-
-    for(size_t i = 0; i < cube.triangles.size(); i++) {
-        const Vec4& ca = clip_coords[cube.triangles[i][0]];
-        const Vec4& cb = clip_coords[cube.triangles[i][1]];
-        const Vec4& cc = clip_coords[cube.triangles[i][2]];
-
-        std::vector<Vec4> poly = clip_near(ca, cb, cc);
-        if(poly.size() < 3) {
-            continue;
-        }
-
-        std::vector<Vec3> s;
-        for(const Vec4& p : poly) {
-            s.push_back(to_screen(p, fb));
-        }
-
-        for(size_t j = 1; j + 1 < s.size(); j++) {
-            if(CULLING && is_back_facing(s[0], s[j], s[j + 1])) {
-                continue;
-            }
-
-            draw_edge(fb, s[0], s[j], Color{0, 0, 0});
-            draw_edge(fb, s[j], s[j + 1], Color{0, 0, 0});
-            draw_edge(fb, s[j + 1], s[0], Color{0, 0, 0});
-        }
-    }
-
+    draw_mesh(fb, cube, mvp);
     fb.write_ppm("cube.ppm");
 //    fb.write_depth_pgm("cube.pgm");
 
