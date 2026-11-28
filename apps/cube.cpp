@@ -5,7 +5,7 @@
 #include "mesh.h"
 #include "pipeline.h"
 
-bool check_winding(const Mesh& mesh) {
+bool check_winding(const Mesh& mesh) {    // 適用以原點為中心的凸形物體（三角形到原點的法向量）
     bool ok = true;
     for(size_t i = 0; i < mesh.triangles.size(); i++) {
         const Vec3& a = mesh.vertices[mesh.triangles[i][0]];
@@ -67,7 +67,7 @@ int main() {
 
     draw_mesh(fb, cube, mvp);
     fb.write_ppm("cube.ppm");
-//    fb.write_depth_pgm("cube.pgm");
+    fb.write_depth_pgm("cube.pgm");
 
     return 0;
 }

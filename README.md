@@ -26,7 +26,7 @@ This is also a learning project for moving from C to C++. Stages 1–3 are writt
 | 4b | `Mat4`, `Vec4`, homogeneous coordinates | C++ | Done |
 | 4c | Projection: model → view → projection → viewport | C++ | Done |
 | 4d | First 3D cube | C++ | Done |
-| 5 | Back-face culling, Z-buffer, hidden-line wireframe, near-plane clipping | C++ | In progress |
+| 5 | Back-face culling, Z-buffer, hidden-line wireframe, near-plane clipping | C++ | Done |
 | 5.5 | Real-time window and orbit camera (SDL2 for display only) | C++ | Planned |
 | 6 | Lighting and textures | C++ | Planned |
 | 7 | Path tracer (based on *Ray Tracing in One Weekend*) | C++ | Planned |
@@ -35,7 +35,7 @@ This is also a learning project for moving from C to C++. Stages 1–3 are writt
 
 ```
 graphics_project/
-├── include/   C++ headers: math, framebuffer, rasterizer
+├── include/   C++ headers: math, framebuffer, rasterizer, mesh, pipeline
 ├── apps/      Demo programs
 ├── tests/     Test programs
 ├── stages/    Stage 1–3 C code, kept as a learning record
@@ -51,12 +51,14 @@ graphics_project/
 | `math3d.h` | `Vec3`, `Vec4`, `Mat4` and transform matrices (Stage 4) |
 | `framebuffer.h` | C++ framebuffer (`std::vector`), depth buffer and depth test, PPM and PGM writers (Stage 5) |
 | `raster.h` | `draw_line` (Bresenham with depth test), `draw_triangle` (edge functions with depth test), `is_back_facing` (Stage 5) |
+| `mesh.h` | `Mesh`: vertices, triangles (as index triples) and one color per triangle |
+| `pipeline.h` | `draw_mesh`: transforms the vertices, clips against the near plane, culls back faces, then draws solid faces and the wireframe |
 
 ### `apps/`
 
 | File | Description | Output |
 |---|---|---|
-| `cube.cpp` | Cube mesh, full projection pipeline, near-plane clipping, back-face culling, Z-buffer, solid faces and hidden-line wireframe | `cube.ppm` `cube.pgm` |
+| `cube.cpp` | Builds a cube `Mesh`, sets up the camera and draws it with `draw_mesh` | `cube.ppm` `cube.pgm` |
 
 ### `tests/`
 
@@ -107,7 +109,8 @@ Run from the project root. Output images are written to the current directory.
 - **`w = 1` for points, `w = 0` for directions.** This way, translation only affects points.
 - **Transforms are read from right to left:** `projection * view * model`.
 - **Vertex buffer + index buffer.** The cube stores 8 unique vertices and 12 triangles as index triples, so each vertex is transformed only once.
-- **Counter-clockwise winding, seen from outside.** Checked at startup by `check_winding`: the cross product of each triangle must point away from the center.
+- **Counter-clockwise winding, seen from outside.** Checked at startup by `check_winding`: the cross product of each triangle must point away from the center. This check only works for convex meshes centered at the origin, like the cube.
+- **Mesh data is separate from drawing.** A `Mesh` only stores what to draw; `draw_mesh` decides how to draw it. A new model only needs a new `Mesh`, and `draw_mesh` stays the same.
 
 ### Clipping
 
