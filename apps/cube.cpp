@@ -141,33 +141,27 @@ int main() {
         {0, 0, 255}, {0, 255, 255}, {255, 0, 0}    // x, y, z
     }};
 
-    std::array<size_t, 6> face_order = {0, 1, 2, 3, 4, 5};
-//    std::array<size_t, 6> face_order = {5, 2, 3, 0, 4, 1};
+    for(size_t t = 0; t < cube.triangles.size(); t++) {
+        const Vec4& ca = clip_coords[cube.triangles[t][0]];
+        const Vec4& cb = clip_coords[cube.triangles[t][1]];
+        const Vec4& cc = clip_coords[cube.triangles[t][2]];
 
-    for(size_t f : face_order) {
-        for(size_t k = 0; k < 2; k++) {
-            size_t t = 2 * f + k;
-            const Vec4& ca = clip_coords[cube.triangles[t][0]];
-            const Vec4& cb = clip_coords[cube.triangles[t][1]];
-            const Vec4& cc = clip_coords[cube.triangles[t][2]];
+        std::vector<Vec4> poly = clip_near(ca, cb, cc);
+        if(poly.size() < 3) {
+            continue;
+        }
 
-            std::vector<Vec4> poly = clip_near(ca, cb, cc);
-            if(poly.size() < 3) {
+        std::vector<Vec3> s;
+        for(const Vec4& p : poly) {
+            s.push_back(to_screen(p, fb));
+        }
+
+        for(size_t j = 1; j + 1 < s.size(); j++) {
+            if(CULLING && is_back_facing(s[0], s[j], s[j + 1])) {
                 continue;
             }
 
-            std::vector<Vec3> s;
-            for(const Vec4& p : poly) {
-                s.push_back(to_screen(p, fb));
-            }
-
-            for(size_t j = 1; j + 1 < s.size(); j++) {
-                if(CULLING && is_back_facing(s[0], s[j], s[j + 1])) {
-                    continue;
-                }
-
-                draw_triangle(fb, s[0], s[j], s[j + 1], face_colors[f]);
-            }
+            draw_triangle(fb, s[0], s[j], s[j + 1], face_colors[t / 2]);
         }
     }
 
