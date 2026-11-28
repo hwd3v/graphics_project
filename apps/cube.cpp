@@ -5,20 +5,17 @@
 #include "framebuffer.h"
 #include "raster.h"
 #include "math3d.h"
+#include "mesh.h"
 
-constexpr size_t NUM_TRIS = 12;
-constexpr size_t NUM_VERTS = 8;
 constexpr bool CULLING = true;
 constexpr float LINE_DEPTH_BIAS = 0.01f;    // 太小會 z-fighting，太大背面的線會從角落透出來
 
-using Tri = std::array<int, 3>;
-
-bool check_winding(const std::array<Vec3, NUM_VERTS>& verts, const std::array<Tri, NUM_TRIS>& tris) {
+bool check_winding(const Mesh& mesh) {
     bool ok = true;
-    for(size_t i = 0; i < tris.size(); i++) {
-        const Vec3& a = verts[tris[i][0]];
-        const Vec3& b = verts[tris[i][1]];
-        const Vec3& c = verts[tris[i][2]];
+    for(size_t i = 0; i < mesh.triangles.size(); i++) {
+        const Vec3& a = mesh.vertices[mesh.triangles[i][0]];
+        const Vec3& b = mesh.vertices[mesh.triangles[i][1]];
+        const Vec3& c = mesh.vertices[mesh.triangles[i][2]];
 
         Vec3 n = (b - a).cross(c - a);
         Vec3 centroid = (a + b + c) * (1.0f / 3.0f);
@@ -103,31 +100,33 @@ int main() {
 
     Mat4 mvp = P * V * M;
 
-    std::array<Vec3, NUM_VERTS> verts = {{
+    Mesh cube;
+
+    cube.vertices = {
         {-1, -1, -1}, {1, -1, -1},
         {-1, 1, -1}, {1, 1, -1},
         {-1, -1, 1}, {1, -1, 1},
         {-1, 1, 1}, {1, 1, 1}
-    }};
+    };
 
-    std::array<Tri, NUM_TRIS> tris = {{
+    cube.triangles = {
         {0, 4, 6}, {0, 6, 2},    // -x
         {4, 1, 5}, {4, 0, 1},    // -y
         {0, 2, 3}, {0, 3, 1},    // -z
         {1, 3, 7}, {1, 7, 5},    // +x
         {6, 7, 3}, {6, 3, 2},    // +y
         {4, 5, 7}, {4, 7, 6}     // +z
-    }};
+    };
 
-    if(!check_winding(verts, tris)) {
+    if(!check_winding(cube)) {
         return 1;
     }
 
-    std::array<Vec3, NUM_VERTS> screen;
-    std::array<Vec4, NUM_VERTS> clip_coords;
+    std::vector<Vec3> screen (cube.vertices.size());
+    std::vector<Vec4> clip_coords (cube.vertices.size());
 
-    for(size_t i = 0; i < verts.size(); i++) {
-        Vec4 clip = mvp * Vec4::point(verts[i]);
+    for(size_t i = 0; i < cube.vertices.size(); i++) {
+        Vec4 clip = mvp * Vec4::point(cube.vertices[i]);
 
         clip_coords[i] = clip;
 
@@ -148,9 +147,9 @@ int main() {
     for(size_t f : face_order) {
         for(size_t k = 0; k < 2; k++) {
             size_t t = 2 * f + k;
-            const Vec4& ca = clip_coords[tris[t][0]];
-            const Vec4& cb = clip_coords[tris[t][1]];
-            const Vec4& cc = clip_coords[tris[t][2]];
+            const Vec4& ca = clip_coords[cube.triangles[t][0]];
+            const Vec4& cb = clip_coords[cube.triangles[t][1]];
+            const Vec4& cc = clip_coords[cube.triangles[t][2]];
 
             std::vector<Vec4> poly = clip_near(ca, cb, cc);
             if(poly.size() < 3) {
@@ -172,10 +171,10 @@ int main() {
         }
     }
 
-    for(size_t i = 0; i < tris.size(); i++) {
-        const Vec4& ca = clip_coords[tris[i][0]];
-        const Vec4& cb = clip_coords[tris[i][1]];
-        const Vec4& cc = clip_coords[tris[i][2]];
+    for(size_t i = 0; i < cube.triangles.size(); i++) {
+        const Vec4& ca = clip_coords[cube.triangles[i][0]];
+        const Vec4& cb = clip_coords[cube.triangles[i][1]];
+        const Vec4& cc = clip_coords[cube.triangles[i][2]];
 
         std::vector<Vec4> poly = clip_near(ca, cb, cc);
         if(poly.size() < 3) {

@@ -5,7 +5,7 @@ CXXFLAGS = -std=c++17 -g -Wall -Wextra -Wpedantic -Wconversion -I include
 
 all: build/cube build/zbuffer_test build/math3d_test build/line_test
 
-build/cube: apps/cube.cpp include/math3d.h include/framebuffer.h include/raster.h
+build/cube: apps/cube.cpp include/math3d.h include/framebuffer.h include/raster.h include/mesh.h
 	mkdir -p build
 	$(CXX) $(CXXFLAGS) apps/cube.cpp -o build/cube
 
